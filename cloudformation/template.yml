@@ -288,7 +288,10 @@ Resources:
                 Version: 1
                 Provider: Manual
               Configuration:
-                ExternalEntityLink: !GetAtt LoadBalancer.DNSName
+                ExternalEntityLink: !Join 
+                  - ''
+                  - - 'http://'
+                    - !GetAtt LoadBalancer.DNSName
               RunOrder: 1
         - Name: Deploy-To-Prod
           Actions:
