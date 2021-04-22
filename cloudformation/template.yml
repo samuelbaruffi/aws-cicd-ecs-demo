@@ -264,7 +264,7 @@ Resources:
               Configuration:
                 ProjectName: !Ref CBP1SS01
               RunOrder: 1
-        - Name: Deploy to Stage
+        - Name: Deploy-To-Stage
           Actions:
             - Name: Deploy
               ActionTypeId:
@@ -279,9 +279,9 @@ Resources:
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 1
-        - Name: Manual Approval To Prod
+        - Name: Manual-Approval-To-Prod
           Actions:
-            - Name: Manual Approval
+            - Name: Approval
               ActionTypeId:
                 Category: Approval
                 Owner: AWS
@@ -290,7 +290,7 @@ Resources:
               Configuration:
                 ExternalEntityLink: !GetAtt LoadBalancer.DNSName
               RunOrder: 1
-        - Name: Deploy to Prod
+        - Name: Deploy-To-Prod
           Actions:
             - Name: Deploy
               ActionTypeId:
