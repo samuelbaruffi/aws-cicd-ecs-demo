@@ -1,0 +1,5 @@
+#### GET INGRESS IP
+kubectl get ingress
+
+#### CHANGE IMAGE ON DEPLOYMENT
+kubectl set  image deployment/reactapp reactapp=342315650485.dkr.ecr.us-east-1.amazonaws.com/reactapp:v2
