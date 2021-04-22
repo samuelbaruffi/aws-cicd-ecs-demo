@@ -11,7 +11,7 @@
 * Cloud9 
 
 # CI/CD
-* Using CodePipeline and CodeBuild for building Docker image to AWS ECR
+* Using CodePipeline and CodeBuild for building Docker image to AWS ECR, and then deploy to ECS Fargate cluster
 
 # Steps to trigger CI/CD on your AWS account
 * Deploy Cloudformation to your AWS Account
