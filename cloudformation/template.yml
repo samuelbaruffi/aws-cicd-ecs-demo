@@ -59,6 +59,10 @@ Parameters:
     Type: String
     # update with the name of the service
     Default: MyService
+  ServiceNameProd:
+    Type: String
+    # update with the name of the service
+    Default: MyServiceProd
   ContainerPort:
     Type: Number
     Default: 80
@@ -188,43 +192,43 @@ Resources:
                     - ':'
                     - !Ref AppPipeline
 
-  AmazonCloudWatchEventRule:
-    Type: 'AWS::Events::Rule'
-    Properties:
-      EventPattern:
-        source:
-          - aws.codecommit
-        detail-type:
-          - CodeCommit Repository State Change
-        resources:
-          - !Join 
-            - ''
-            - - 'arn:aws:codecommit:'
-              - !Ref 'AWS::Region'
-              - ':'
-              - !Ref 'AWS::AccountId'
-              - ':PGCC-Demo-Devops'
-        detail:
-          event:
-            - referenceCreated
-            - referenceUpdated
-          referenceType:
-            - branch
-          referenceName:
-            - master
-      Targets:
-        - Arn: !Join 
-            - ''
-            - - 'arn:aws:codepipeline:'
-              - !Ref 'AWS::Region'
-              - ':'
-              - !Ref 'AWS::AccountId'
-              - ':'
-              - !Ref AppPipeline
-          RoleArn: !GetAtt 
-            - AmazonCloudWatchEventRole
-            - Arn
-          Id: codepipeline-AppPipeline
+  # AmazonCloudWatchEventRule:
+  #   Type: 'AWS::Events::Rule'
+  #   Properties:
+  #     EventPattern:
+  #       source:
+  #         - aws.codecommit
+  #       detail-type:
+  #         - CodeCommit Repository State Change
+  #       resources:
+  #         - !Join 
+  #           - ''
+  #           - - 'arn:aws:codecommit:'
+  #             - !Ref 'AWS::Region'
+  #             - ':'
+  #             - !Ref 'AWS::AccountId'
+  #             - ':PGCC-Demo-Devops'
+  #       detail:
+  #         event:
+  #           - referenceCreated
+  #           - referenceUpdated
+  #         referenceType:
+  #           - branch
+  #         referenceName:
+  #           - master
+  #     Targets:
+  #       - Arn: !Join 
+  #           - ''
+  #           - - 'arn:aws:codepipeline:'
+  #             - !Ref 'AWS::Region'
+  #             - ':'
+  #             - !Ref 'AWS::AccountId'
+  #             - ':'
+  #             - !Ref AppPipeline
+  #         RoleArn: !GetAtt 
+  #           - AmazonCloudWatchEventRole
+  #           - Arn
+  #         Id: codepipeline-AppPipeline
   
   AppPipeline:
     Type: 'AWS::CodePipeline::Pipeline'
@@ -303,8 +307,8 @@ Resources:
                 Provider: ECS
               Configuration:
                 ClusterName: !Ref Cluster
-                ServiceName: !Ref Service
-                FileName: imagedefinitions.json
+                ServiceName: !Ref ServiceProd
+                FileName: imagedefinitionsprod.json
               InputArtifacts:
                 - Name: BuildOutput
               RunOrder: 1       
@@ -425,6 +429,10 @@ Resources:
     Properties:
       ClusterName: !Join ['', [!Ref ServiceName, Cluster]]
   
+
+  #################################################
+  ####### STAGE ECS SERVICE/TASK/LB CONFIG ########
+  #################################################                             
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     # Makes sure the log group is created before it is used.
@@ -562,6 +570,7 @@ Resources:
         - ContainerName: !Ref ServiceName
           ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroup
+  
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -579,6 +588,7 @@ Resources:
           Value: 60 # default is 300
       TargetType: ip
       VpcId: !Ref VPC
+  
   ListenerHTTPS:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
@@ -604,10 +614,12 @@ Resources:
       Subnets:
         - !Ref SubnetA
         - !Ref SubnetB
+  
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Join ['', [/ecs/, !Ref ServiceName, TaskDefinition]]
+  
   AutoScalingTarget:
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
@@ -618,6 +630,7 @@ Resources:
       ServiceNamespace: ecs
       # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that allows Application Auto Scaling to modify your scalable target."
       RoleARN: !GetAtt AutoScalingRole.Arn
+  
   AutoScalingPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Properties:
@@ -631,4 +644,220 @@ Resources:
         ScaleOutCooldown: 10
         # Keep things at or lower than 50% CPU utilization, for example
         TargetValue: !Ref AutoScalingTargetValue
-              
+
+
+  #################################################
+  ####### PROD ECS SERVICE/TASK/LB CONFIG ########
+  #################################################
+  
+  TaskDefinitionProd:
+    Type: AWS::ECS::TaskDefinition
+    # Makes sure the log group is created before it is used.
+    DependsOn: LogGroup
+    Properties:
+      # Name of the task definition. Subsequent versions of the task definition are grouped together under this name.
+      Family: !Join ['', [!Ref ServiceNameProd, TaskDefinitionProd]]
+      # awsvpc is required for Fargate
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      # 256 (.25 vCPU) - Available memory values: 0.5GB, 1GB, 2GB
+      # 512 (.5 vCPU) - Available memory values: 1GB, 2GB, 3GB, 4GB
+      # 1024 (1 vCPU) - Available memory values: 2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB
+      # 2048 (2 vCPU) - Available memory values: Between 4GB and 16GB in 1GB increments
+      # 4096 (4 vCPU) - Available memory values: Between 8GB and 30GB in 1GB increments
+      Cpu: 256
+      # 0.5GB, 1GB, 2GB - Available cpu values: 256 (.25 vCPU)
+      # 1GB, 2GB, 3GB, 4GB - Available cpu values: 512 (.5 vCPU)
+      # 2GB, 3GB, 4GB, 5GB, 6GB, 7GB, 8GB - Available cpu values: 1024 (1 vCPU)
+      # Between 4GB and 16GB in 1GB increments - Available cpu values: 2048 (2 vCPU)
+      # Between 8GB and 30GB in 1GB increments - Available cpu values: 4096 (4 vCPU)
+      Memory: 0.5GB
+      # A role needed by ECS.
+      # "The ARN of the task execution role that containers in this task can assume. All containers in this task are granted the permissions that are specified in this role."
+      # "There is an optional task execution IAM role that you can specify with Fargate to allow your Fargate tasks to make API calls to Amazon ECR."
+      ExecutionRoleArn: !Ref ExecutionRoleProd
+      # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that grants containers in the task permission to call AWS APIs on your behalf."
+      TaskRoleArn: !Ref TaskRoleProd
+      ContainerDefinitions:
+        - Name: !Ref ServiceNameProd
+          Image: !Ref Image
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+          # Send logs to CloudWatch Logs
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroupProd
+              awslogs-stream-prefix: ecs
+  
+  # A role needed by ECS
+  ExecutionRoleProd:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceNameProd, ExecutionRoleProd]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+  
+  # A role for the containers
+  TaskRoleProd:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceNameProd, TaskRoleProd]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      # ManagedPolicyArns:
+      #   -
+      # Policies:
+      #   -
+  
+  # A role needed for auto scaling
+  AutoScalingRoleProd:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref ServiceNameProd, AutoScalingRoleProd]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceAutoscaleRole'
+  
+  ContainerSecurityGroupProd:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Join ['', [!Ref ServiceNameProd, ContainerSecurityGroupProd]]
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref ContainerPort
+          ToPort: !Ref ContainerPort
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroupProd
+  
+  LoadBalancerSecurityGroupProd:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Join ['', [!Ref ServiceNameProd, LoadBalancerSecurityGroupProd]]
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref LoadBalancerPort
+          ToPort: !Ref LoadBalancerPort
+          CidrIp: 0.0.0.0/0
+  
+  ServiceProd:
+    Type: AWS::ECS::Service
+    # This dependency is needed so that the load balancer is setup correctly in time
+    DependsOn:
+      - ListenerHTTPSProd
+    Properties: 
+      ServiceName: !Ref ServiceNameProd
+      Cluster: !Ref Cluster
+      TaskDefinition: !Ref TaskDefinitionProd
+      DeploymentConfiguration:
+        MinimumHealthyPercent: 100
+        MaximumPercent: 200
+      DesiredCount: 2
+      # This may need to be adjusted if the container takes a while to start up
+      HealthCheckGracePeriodSeconds: 30
+      LaunchType: FARGATE
+      NetworkConfiguration: 
+        AwsvpcConfiguration:
+          # change to DISABLED if you're using private subnets that have access to a NAT gateway
+          AssignPublicIp: ENABLED
+          Subnets:
+            - !Ref SubnetA
+            - !Ref SubnetB
+          SecurityGroups:
+            - !Ref ContainerSecurityGroupProd
+      LoadBalancers:
+        - ContainerName: !Ref ServiceNameProd
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroupProd
+  
+  TargetGroupProd:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      # will look for a 200 status code by default unless specified otherwise
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckTimeoutSeconds: 5
+      UnhealthyThresholdCount: 2
+      HealthyThresholdCount: 2
+      Name: !Join ['', [!Ref ServiceNameProd, TargetGroupProd]]
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60 # default is 300
+      TargetType: ip
+      VpcId: !Ref VPC
+  
+  ListenerHTTPSProd:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroupProd
+          Type: forward
+      LoadBalancerArn: !Ref LoadBalancerProd
+      Port: !Ref LoadBalancerPort
+      Protocol: HTTP
+
+  LoadBalancerProd:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      LoadBalancerAttributes:
+        # this is the default, but is specified here in case it needs to be changed
+        - Key: idle_timeout.timeout_seconds
+          Value: 60
+      Name: !Join ['', [!Ref ServiceNameProd, LoadBalancerProd]]
+      # "internal" is also an option
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref LoadBalancerSecurityGroupProd
+      Subnets:
+        - !Ref SubnetA
+        - !Ref SubnetB
+  
+  LogGroupProd:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [/ecs/, !Ref ServiceNameProd, TaskDefinitionProd]]
+  
+  AutoScalingTargetProd:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MinCapacity: !Ref MinContainers
+      MaxCapacity: !Ref MaxContainers
+      ResourceId: !Join ['/', [service, !Ref Cluster, !GetAtt ServiceProd.Name]]
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+      # "The Amazon Resource Name (ARN) of an AWS Identity and Access Management (IAM) role that allows Application Auto Scaling to modify your scalable target."
+      RoleARN: !GetAtt AutoScalingRoleProd.Arn
+  
+  AutoScalingPolicyProd:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Join ['', [!Ref ServiceNameProd, AutoScalingPolicyProd]]
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTargetProd
+      TargetTrackingScalingPolicyConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
+        ScaleInCooldown: 10
+        ScaleOutCooldown: 10
+        # Keep things at or lower than 50% CPU utilization, for example
+        TargetValue: !Ref AutoScalingTargetValue
