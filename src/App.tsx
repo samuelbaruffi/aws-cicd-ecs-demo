@@ -8,7 +8,7 @@ function App() {
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <p>
-          GGFS EKS Container Demo VERSION 2!
+          AWS CI/CD Pipeline Demo with ECS Fargate v1!
         </p>
         <a
           className="App-link"
