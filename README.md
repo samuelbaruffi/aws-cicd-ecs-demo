@@ -29,3 +29,6 @@
   * Container image built and stored on ECR
   * ECS Fargate service be updated with new ECR image
   * Able to see new ALB endpoint with content
+
+# AWS CI/CD Diagram
+![Diagram](demo-devops-diagram.png)
