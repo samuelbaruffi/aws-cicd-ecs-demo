@@ -75,7 +75,7 @@ Parameters:
   # for autoscaling
   MinContainers:
     Type: Number
-    Default: 2
+    Default: 1
   # for autoscaling
   MaxContainers:
     Type: Number
