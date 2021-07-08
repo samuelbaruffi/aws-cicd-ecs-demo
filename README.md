@@ -16,7 +16,7 @@
 # Steps to trigger CI/CD on your AWS account
 * Deploy Cloudformation to your AWS Account
 * Open Cloud9 IDE, and run this commands:
-  * Git Clone this repo `githttps://github.com/samuelbaruffi/aws-cicd-ecs-demo.git`
+  * Git Clone this repo `git clone https://github.com/samuelbaruffi/aws-cicd-ecs-demo.git`
   * Git Clone the CodeCommit Repot `git clone <CODE_COMMIT_REPO_HTTPS_ENDPOINT>`
   * CD inside the GitHub Repo Folder `cd aws-cicd-ecs-demo`
   * Copy files from GitHub folder to CodeCommit `cp * -a  ../PGCC-Demo-Devops/`
