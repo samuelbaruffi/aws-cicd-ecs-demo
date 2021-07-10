@@ -22,7 +22,7 @@
   * Copy files from GitHub folder to CodeCommit `cp * -a  ../PGCC-Demo-Devops/`
   * CD inside the CodeCommit Repo Folder `cd ../PGCC-Demo-Devops/`
   * Add all files to git control `git add .`
-  * Commit all files `git commit -am "first commit`
+  * Commit all files `git commit -am "first commit"`
   * Push all files to CodeCommit `git push`
 * This will trigger CodePipeline to start
 * You should in 5 mins see the changes be applied to your account:
