@@ -1,10 +1,10 @@
 # build environment
-FROM public.ecr.aws/bitnami/node:latest as builder
+FROM public.ecr.aws/bitnami/node:16.15.0 as builder
 WORKDIR /app
 ENV PATH /app/node_modules/.bin:$PATH
 COPY package.json ./
 COPY package-lock.json ./
-RUN npm ci --silent
+# RUN npm ci --silent
 RUN npm install react-scripts@3.4.1 -g --silent
 COPY . ./
 RUN npm run build
